@@ -17,7 +17,7 @@ incident_log = []
 
 
 def send_push_notification(title, message):
-    if PUSHBULLET_API_KEY == "PASTE_YOUR_ACCESS_TOKEN_HERE":
+    if PUSHBULLET_API_KEY == ("o.RGACT8xim6D1d0UnUDHI9xjr35iyQ7LB"):
         return
 
     url = "https://api.pushbullet.com/v2/pushes"
@@ -143,5 +143,6 @@ LPG: {lpg} | Alcohol: {alcohol}
 
 if __name__ == "__main__":
     app.run()
+
 
 
