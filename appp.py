@@ -141,4 +141,5 @@ LPG: {lpg} | Alcohol: {alcohol}
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run()
+
