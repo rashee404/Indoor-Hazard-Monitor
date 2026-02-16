@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 # 🔑 Put your Pushbullet API Key here
 import os
-PUSHBULLET_API_KEY = os.environ.get("o.RGACT8xim6D1d0UnUDHI9xjr35iyQ7LB")
+PUSHBULLET_API_KEY = os.environ.get("PUSHBULLET_API_KEY","")
 
 last_alert_time = None
 ALERT_COOLDOWN_SECONDS = 60
@@ -143,6 +143,7 @@ LPG: {lpg} | Alcohol: {alcohol}
 
 if __name__ == "__main__":
     app.run()
+
 
 
 
