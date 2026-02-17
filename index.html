@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Indoor Air Risk Monitoring System</title>
+    <title>Indoor Air Risk Monitoring System - Advanced</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body {
@@ -31,6 +31,7 @@
             width: 180px;
             text-align: center;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            transition: 0.3s ease;
         }
 
         #riskBox {
@@ -81,12 +82,21 @@
             border-radius: 8px;
             cursor: pointer;
         }
+
+        canvas {
+            background: white;
+            border-radius: 8px;
+            padding: 10px;
+        }
     </style>
 </head>
 
 <body>
 
-    <h1>Indoor Air Risk Monitoring System</h1>
+    <!-- Alarm audio -->
+    <audio id="alarmSound" src="{{ url_for('static', filename='alarm.mp3') }}"></audio>
+
+    <h1>Indoor Air Risk Monitoring System - Advanced</h1>
 
     <div id="riskBox">Loading...</div>
     <div id="explanation"></div>
@@ -122,7 +132,12 @@
     </div>
 
     <div class="section">
-        <h3>Incident Log</h3>
+        <h3>Risk Factor Pie</h3>
+        <canvas id="factorPie"></canvas>
+    </div>
+
+    <div class="section">
+        <h3>Incident Log & Stats</h3>
         <table>
             <tr>
                 <th>Time</th>
@@ -131,6 +146,7 @@
             </tr>
             <tbody id="incidentTable"></tbody>
         </table>
+        <div id="stats"></div>
     </div>
 
     <div class="emergency">
@@ -138,89 +154,102 @@
     </div>
 
     <script>
-        if (Notification.permission !== "Granted") {
-            Notification.requestPermission();
-        }
-        let chart;
-        const ctx = document.getElementById('riskChart').getContext('2d');
+        const alarm = document.getElementById("alarmSound");
+        let chart, pieChart;
+        let riskHistory = [];
 
+        // Unlock audio
+        document.body.addEventListener("click", () => {
+            alarm.play().then(() => alarm.pause()).catch(() => {});
+        }, { once: true });
+
+        const ctx = document.getElementById('riskChart').getContext('2d');
         chart = new Chart(ctx, {
             type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Risk %',
-                    data: [],
-                    borderColor: 'red',
-                    fill: false
-                }]
-            }
+            data: { labels: [], datasets: [{ label: 'Risk %', data: [], borderColor: 'red', fill: false }] }
+        });
+
+        const pieCtx = document.getElementById('factorPie').getContext('2d');
+        pieChart = new Chart(pieCtx, {
+            type: 'pie',
+            data: { labels: ['LPG', 'Temp', 'Humidity', 'Alcohol'], datasets: [{ data: [0, 0, 0, 0], backgroundColor: ['#FF5722','#FFC107','#4CAF50','#2196F3']] }]
         });
 
         function callEmergency() {
             window.location.href = "tel:112";
         }
 
+        function triggerAlarm(riskLevel) {
+            if(riskLevel === "High" || riskLevel === "Critical") {
+                alarm.play().catch(err => console.log("Audio play failed", err));
+                if ("speechSynthesis" in window) {
+                    const msg = new SpeechSynthesisUtterance("Warning! " + riskLevel + " risk detected!");
+                    window.speechSynthesis.speak(msg);
+                }
+            }
+        }
+
         function updateData() {
-            fetch('/data')
-                .then(res => res.json())
-                .then(data => {
+            fetch('/data').then(res => res.json()).then(data => {
+                const current = data.current;
+                document.getElementById("lpg").innerText = current.lpg;
+                document.getElementById("temp").innerText = current.temp;
+                document.getElementById("humidity").innerText = current.humidity;
+                document.getElementById("alcohol").innerText = current.alcohol;
 
-                    const current = data.current;
+                document.getElementById("b_lpg").innerText = data.breakdown.lpg;
+                document.getElementById("b_temp").innerText = data.breakdown.temp;
+                document.getElementById("b_humidity").innerText = data.breakdown.humidity;
+                document.getElementById("b_alcohol").innerText = data.breakdown.alcohol;
 
-                    document.getElementById("lpg").innerText = current.lpg;
-                    document.getElementById("temp").innerText = current.temp;
-                    document.getElementById("humidity").innerText = current.humidity;
-                    document.getElementById("alcohol").innerText = current.alcohol;
+                document.getElementById("riskBox").innerText = current.status + " (" + current.risk + "%)";
+                if (current.status === "Safe") { document.getElementById("riskBox").style.background = "#4CAF50"; }
+                else if (current.status === "Moderate") { document.getElementById("riskBox").style.background = "#FFC107"; }
+                else if (current.status === "High") { document.getElementById("riskBox").style.background = "#FF5722"; }
+                else { document.getElementById("riskBox").style.background = "#D32F2F"; }
 
-                    document.getElementById("b_lpg").innerText = data.breakdown.lpg;
-                    document.getElementById("b_temp").innerText = data.breakdown.temp;
-                    document.getElementById("b_humidity").innerText = data.breakdown.humidity;
-                    document.getElementById("b_alcohol").innerText = data.breakdown.alcohol;
-
-                    document.getElementById("riskBox").innerText =
-                        current.status + " (" + current.risk + "%)";
-
-                    document.getElementById("explanation").innerText =
-                        current.explanation;
-
-                    if (current.status === "Safe") {
-                        document.getElementById("riskBox").style.background = "#4CAF50";
-                    } else if (current.status === "Moderate") {
-                        document.getElementById("riskBox").style.background = "#FFC107";
-                    } else if (current.status === "High") {
-                        document.getElementById("riskBox").style.background = "#FF5722";
+                // Desktop notifications + alarm
+                if(current.status === "High" || current.status === "Critical") {
+                    if(Notification.permission === "granted"){
+                        new Notification("Indoor Hazard Alert", {body: current.status + " Risk Detected. " + current.explanation});
                     } else {
-                        document.getElementById("riskBox").style.background = "#D32F2F";
+                        Notification.requestPermission();
                     }
+                    triggerAlarm(current.status);
+                }
 
-                    if (current.status === "High" || current.status === "Critical") {
-                        new Notification("Indoor Hazard Alert", { body: current.status + " Risk Detected. " + current.explanation });
-                    }
+                // Update charts
+                riskHistory.push(current.risk);
+                if(riskHistory.length > 20) riskHistory.shift();
+                chart.data.labels = data.history.map(i => i.time);
+                chart.data.datasets[0].data = riskHistory;
+                chart.update();
 
-                    chart.data.labels = data.history.map(item => item.time);
-                    chart.data.datasets[0].data = data.history.map(item => item.risk);
-                    chart.update();
+                pieChart.data.datasets[0].data = [
+                    data.breakdown.lpg,
+                    data.breakdown.temp,
+                    data.breakdown.humidity,
+                    data.breakdown.alcohol
+                ];
+                pieChart.update();
 
-                    const table = document.getElementById("incidentTable");
-                    table.innerHTML = "";
-                    data.incident_log.forEach(entry => {
-                        table.innerHTML += `
-                    <tr>
-                        <td>${entry.time}</td>
-                        <td>${entry.status}</td>
-                        <td>${entry.reason}</td>
-                    </tr>
-                `;
-                    });
-
+                // Incident log
+                const table = document.getElementById("incidentTable");
+                table.innerHTML = "";
+                data.incident_log.forEach(entry => {
+                    table.innerHTML += `<tr><td>${entry.time}</td><td>${entry.status}</td><td>${entry.reason}</td></tr>`;
                 });
+
+                // Stats
+                const stats = document.getElementById("stats");
+                const maxRisk = Math.max(...riskHistory).toFixed(2);
+                const totalAlerts = data.incident_log.length;
+                stats.innerHTML = `Total Alerts: ${totalAlerts} | Max Risk: ${maxRisk}%`;
+            });
         }
 
         setInterval(updateData, 3000);
         updateData();
     </script>
-
 </body>
-
 </html>
