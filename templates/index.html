@@ -1,226 +1,185 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-    <title>Indoor Air Risk Monitoring System</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #f4f6f9;
-            margin: 0;
-            padding: 20px;
-        }
 
-        h1 {
-            text-align: center;
-        }
+<title>Indoor Air Risk Monitor</title>
 
-        .card-container {
-            display: flex;
-            justify-content: space-around;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-        .card {
-            background: white;
-            padding: 15px;
-            margin: 10px;
-            border-radius: 10px;
-            width: 180px;
-            text-align: center;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-        }
+<style>
 
-        #riskBox {
-            text-align: center;
-            margin-top: 20px;
-            padding: 25px;
-            border-radius: 12px;
-            font-size: 24px;
-            font-weight: bold;
-            color: white;
-            transition: 0.3s ease;
-        }
+body{
+font-family:Arial;
+background:#0f172a;
+color:white;
+text-align:center;
+}
 
-        #explanation {
-            text-align: center;
-            margin-top: 10px;
-            font-style: italic;
-        }
+.card-container{
+display:flex;
+justify-content:center;
+flex-wrap:wrap;
+margin-top:20px;
+}
 
-        .section {
-            margin-top: 30px;
-        }
+.card{
+background:#1e293b;
+padding:20px;
+margin:10px;
+border-radius:10px;
+width:150px;
+}
 
-        table {
-            width: 100%;
-            background: white;
-            border-radius: 8px;
-            padding: 10px;
-        }
+#riskBox{
+margin:20px;
+padding:20px;
+border-radius:10px;
+font-size:28px;
+}
 
-        th,
-        td {
-            padding: 8px;
-            text-align: center;
-        }
+button{
+padding:12px 20px;
+border:none;
+border-radius:8px;
+background:red;
+color:white;
+font-size:16px;
+}
 
-        .emergency {
-            margin-top: 20px;
-            text-align: center;
-        }
+</style>
 
-        .emergency button {
-            background: red;
-            color: white;
-            padding: 12px 20px;
-            font-size: 16px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-    </style>
 </head>
 
 <body>
 
-    <h1>Indoor Air Risk Monitoring System</h1>
+<h1>Indoor Air Hazard Monitoring System</h1>
 
-    <div id="riskBox">Loading...</div>
-    <div id="explanation"></div>
+<div id="riskBox">Loading...</div>
 
-    <div class="card-container">
-        <div class="card">LPG<br><span id="lpg">--</span></div>
-        <div class="card">Temperature<br><span id="temp">--</span></div>
-        <div class="card">Humidity<br><span id="humidity">--</span></div>
-        <div class="card">Alcohol<br><span id="alcohol">--</span></div>
-    </div>
+<div class="card-container">
 
-    <div class="section">
-        <h3>Risk Contribution Breakdown</h3>
-        <table>
-            <tr>
-                <th>LPG</th>
-                <th>Temp</th>
-                <th>Humidity</th>
-                <th>Alcohol</th>
-            </tr>
-            <tr>
-                <td id="b_lpg">--</td>
-                <td id="b_temp">--</td>
-                <td id="b_humidity">--</td>
-                <td id="b_alcohol">--</td>
-            </tr>
-        </table>
-    </div>
+<div class="card">
+LPG
+<br>
+<span id="lpg">--</span>
+</div>
 
-    <div class="section">
-        <h3>Risk Trend</h3>
-        <canvas id="riskChart"></canvas>
-    </div>
+<div class="card">
+Temperature
+<br>
+<span id="temp">--</span>
+</div>
 
-    <div class="section">
-        <h3>Incident Log</h3>
-        <table>
-            <tr>
-                <th>Time</th>
-                <th>Status</th>
-                <th>Reason</th>
-            </tr>
-            <tbody id="incidentTable"></tbody>
-        </table>
-    </div>
+<div class="card">
+Humidity
+<br>
+<span id="humidity">--</span>
+</div>
 
-    <div class="emergency">
-        <button onclick="callEmergency()">🚨 Call Emergency (112)</button>
-    </div>
+<div class="card">
+Alcohol
+<br>
+<span id="alcohol">--</span>
+</div>
 
-    <script>
-        if (Notification.permission !== "Granted") {
-            Notification.requestPermission();
-        }
-        let chart;
-        const ctx = document.getElementById('riskChart').getContext('2d');
+</div>
 
-        chart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'Risk %',
-                    data: [],
-                    borderColor: 'red',
-                    fill: false
-                }]
-            }
-        });
+<h3>Risk Trend</h3>
 
-        function callEmergency() {
-            window.location.href = "tel:112";
-        }
+<canvas id="riskChart"></canvas>
 
-        function updateData() {
-            fetch('/data')
-                .then(res => res.json())
-                .then(data => {
+<br><br>
 
-                    const current = data.current;
+<button onclick="callEmergency()">🚨 Emergency Call</button>
 
-                    document.getElementById("lpg").innerText = current.lpg;
-                    document.getElementById("temp").innerText = current.temp;
-                    document.getElementById("humidity").innerText = current.humidity;
-                    document.getElementById("alcohol").innerText = current.alcohol;
+<audio id="alarmSound" src="/static/alarm.mp3"></audio>
 
-                    document.getElementById("b_lpg").innerText = data.breakdown.lpg;
-                    document.getElementById("b_temp").innerText = data.breakdown.temp;
-                    document.getElementById("b_humidity").innerText = data.breakdown.humidity;
-                    document.getElementById("b_alcohol").innerText = data.breakdown.alcohol;
+<script>
 
-                    document.getElementById("riskBox").innerText =
-                        current.status + " (" + current.risk + "%)";
+if(Notification.permission !== "granted"){
+Notification.requestPermission();
+}
 
-                    document.getElementById("explanation").innerText =
-                        current.explanation;
+const alarm = document.getElementById("alarmSound");
 
-                    if (current.status === "Safe") {
-                        document.getElementById("riskBox").style.background = "#4CAF50";
-                    } else if (current.status === "Moderate") {
-                        document.getElementById("riskBox").style.background = "#FFC107";
-                    } else if (current.status === "High") {
-                        document.getElementById("riskBox").style.background = "#FF5722";
-                    } else {
-                        document.getElementById("riskBox").style.background = "#D32F2F";
-                    }
+const ctx = document.getElementById('riskChart').getContext('2d');
 
-                    if (current.status === "High" || current.status === "Critical") {
-                        new Notification("Indoor Hazard Alert", { body: current.status + " Risk Detected. " + current.explanation });
-                    }
+const chart = new Chart(ctx,{
+type:'line',
+data:{
+labels:[],
+datasets:[{
+label:'Risk %',
+data:[],
+borderColor:'red'
+}]
+}
+});
 
-                    chart.data.labels = data.history.map(item => item.time);
-                    chart.data.datasets[0].data = data.history.map(item => item.risk);
-                    chart.update();
+function callEmergency(){
+window.location.href="tel:112";
+}
 
-                    const table = document.getElementById("incidentTable");
-                    table.innerHTML = "";
-                    data.incident_log.forEach(entry => {
-                        table.innerHTML += `
-                    <tr>
-                        <td>${entry.time}</td>
-                        <td>${entry.status}</td>
-                        <td>${entry.reason}</td>
-                    </tr>
-                `;
-                    });
+function updateData(){
 
-                });
-        }
+fetch('/data')
+.then(res=>res.json())
+.then(data=>{
 
-        setInterval(updateData, 3000);
-        updateData();
-    </script>
+const c = data.current
+
+document.getElementById("lpg").innerText = c.lpg
+document.getElementById("temp").innerText = c.temp
+document.getElementById("humidity").innerText = c.humidity
+document.getElementById("alcohol").innerText = c.alcohol
+
+document.getElementById("riskBox").innerText =
+c.status + " ("+c.risk+"%)"
+
+if(c.status==="Safe"){
+riskBox.style.background="green"
+}
+
+else if(c.status==="Moderate"){
+riskBox.style.background="orange"
+}
+
+else if(c.status==="High"){
+riskBox.style.background="red"
+alarm.play()
+
+new Notification(
+"Hazard Warning",
+{body:"High risk detected!"}
+)
+}
+
+else{
+
+riskBox.style.background="darkred"
+alarm.play()
+
+new Notification(
+"CRITICAL ALERT",
+{body:"Critical indoor hazard detected!"}
+)
+
+}
+
+chart.data.labels = data.history.map(i=>i.time)
+chart.data.datasets[0].data = data.history.map(i=>i.risk)
+
+chart.update()
+
+})
+
+}
+
+setInterval(updateData,3000)
+
+updateData()
+
+</script>
 
 </body>
-
 </html>
