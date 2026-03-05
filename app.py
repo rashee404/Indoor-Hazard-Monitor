@@ -1,103 +1,116 @@
 from flask import Flask, render_template, jsonify
 import random
-import datetime
+import time
 import requests
 
 app = Flask(__name__)
 
-# Pushbullet API Key
-import os
-PUSHBULLET_API_KEY = os.environ.get("PUSHBULLET_API_KEY")
-
-last_alert_time = None
-ALERT_COOLDOWN_SECONDS = 60
+PUSHBULLET_TOKEN = "o.RGACT8xim6D1d0UnUDHI9xjr35iyQ7LB"
 
 history = []
 incident_log = []
+last_status = "Safe"
 
-def send_push_notification(title, message):
-    if not PUSHBULLET_API_KEY:
-        return
-    url = "https://api.pushbullet.com/v2/pushes"
-    headers = {"Access-Token": PUSHBULLET_API_KEY, "Content-Type": "application/json"}
-    data = {"type":"note","title":title,"body":message}
-    requests.post(url, json=data, headers=headers)
 
-def calculate_risk(lpg,temp,humidity,alcohol):
-    lpg_w = 0.4*lpg
-    temp_w = 0.2*(temp*2)
-    hum_w = 0.2*humidity
-    alc_w = 0.2*alcohol
-    risk = lpg_w + temp_w + hum_w + alc_w
-    if lpg>70 and alcohol>50: risk+=15
-    return min(round(risk,2),100), {"lpg":round(lpg_w,2),"temp":round(temp_w,2),"humidity":round(hum_w,2),"alcohol":round(alc_w,2)}
+def send_pushbullet(title, message):
+    try:
+        requests.post(
+            "https://api.pushbullet.com/v2/pushes",
+            headers={"Access-Token": PUSHBULLET_TOKEN},
+            json={
+                "type": "note",
+                "title": title,
+                "body": message
+            }
+        )
+    except:
+        pass
 
-def classify_risk(risk):
-    if risk<30: return "Safe"
-    elif risk<60: return "Moderate"
-    elif risk<80: return "High"
-    else: return "Critical"
 
-def generate_explanation(lpg,humidity,alcohol,status):
-    if status=="Safe": return "Air quality within safe limits."
-    if lpg>70 and alcohol>50: return "Combined flammable gases detected. Explosion probability increased."
-    if lpg>70: return "Elevated LPG detected. Possible gas leakage."
-    if humidity>80: return "Excess humidity detected. Risk of mold and respiratory issues."
-    if alcohol>60: return "High alcohol vapors detected. Ensure ventilation."
-    return "Air quality deviation detected. Monitor closely."
+def calculate_risk(lpg, temp, humidity, alcohol):
 
-def predict_risk(history_list):
-    if len(history_list)<5: return history_list[-1] if history_list else 0
-    return round(sum(history_list[-5:])/5,2)
+    score = 0
+
+    if lpg > 300:
+        score += 40
+    if temp > 40:
+        score += 20
+    if humidity > 80:
+        score += 15
+    if alcohol > 250:
+        score += 25
+
+    return min(score, 100)
+
+
+def get_status(score):
+
+    if score < 25:
+        return "Safe"
+    elif score < 50:
+        return "Moderate"
+    elif score < 75:
+        return "High"
+    else:
+        return "Critical"
+
 
 @app.route("/")
 def home():
     return render_template("index.html")
 
+
 @app.route("/data")
 def data():
-    global last_alert_time
-    lpg = random.randint(10,100)
-    temp = random.randint(20,45)
-    humidity = random.randint(30,90)
-    alcohol = random.randint(5,100)
 
-    risk, breakdown = calculate_risk(lpg,temp,humidity,alcohol)
-    status = classify_risk(risk)
-    explanation = generate_explanation(lpg,humidity,alcohol,status)
+    global last_status
 
-    now = datetime.datetime.now()
-    time_str = now.strftime("%H:%M:%S")
+    lpg = random.randint(100, 600)
+    temp = random.randint(20, 50)
+    humidity = random.randint(40, 90)
+    alcohol = random.randint(100, 500)
 
-    if status in ["High","Critical"]:
-        if last_alert_time is None or (now-last_alert_time).total_seconds()>ALERT_COOLDOWN_SECONDS:
-            message = f"Status: {status}\nRisk: {risk}%\n{explanation}\nLPG: {lpg} | Alcohol: {alcohol}"
-            send_push_notification("Indoor Hazard Alert", message)
-            last_alert_time = now
-            incident_log.append({"time":time_str,"status":status,"reason":explanation})
-            if len(incident_log)>10: incident_log.pop(0)
+    risk = calculate_risk(lpg, temp, humidity, alcohol)
+    status = get_status(risk)
 
-    history.append(risk)
-    if len(history)>20: history.pop(0)
-    predicted_risk = predict_risk(history)
+    explanation = f"LPG:{lpg}, Temp:{temp}, Humidity:{humidity}, Alcohol:{alcohol}"
+
+    history.append({
+        "time": time.strftime("%H:%M:%S"),
+        "risk": risk
+    })
+
+    if len(history) > 10:
+        history.pop(0)
+
+    if status != last_status and status in ["High", "Critical"]:
+        send_pushbullet("⚠ Indoor Hazard Alert", f"{status} risk detected!")
+
+        incident_log.append({
+            "time": time.strftime("%H:%M:%S"),
+            "status": status,
+            "reason": explanation
+        })
+
+        if len(incident_log) > 10:
+            incident_log.pop(0)
+
+    last_status = status
 
     return jsonify({
-        "current": {"lpg":lpg,"temp":temp,"humidity":humidity,"alcohol":alcohol,"risk":risk,"status":status,"explanation":explanation,"predicted_risk":predicted_risk},
-        "breakdown": breakdown,
+        "current": {
+            "lpg": lpg,
+            "temp": temp,
+            "humidity": humidity,
+            "alcohol": alcohol,
+            "risk": risk,
+            "status": status,
+            "explanation": explanation
+        },
         "history": history,
         "incident_log": incident_log
     })
-import os
-if __name__=="__main__":
-    port= int(os.environ.get("PORT",5000))
-    app.run(host="0.0.0.0",port=port)
 
 
-    
-
-
-
-    
-
-   
-
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
