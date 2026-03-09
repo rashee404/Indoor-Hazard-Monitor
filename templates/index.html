@@ -37,6 +37,17 @@ border-radius:10px;
 font-size:28px;
 }
 
+#alertBanner{
+display:none;
+background:#ff4d4d;
+color:white;
+padding:15px;
+font-size:22px;
+font-weight:bold;
+margin:10px;
+border-radius:10px;
+}
+
 button{
 padding:12px 20px;
 border:none;
@@ -53,6 +64,8 @@ font-size:16px;
 <body>
 
 <h1>Indoor Air Hazard Monitoring System</h1>
+
+<div id="alertBanner"></div>
 
 <div id="riskBox">Loading...</div>
 
@@ -101,6 +114,8 @@ Notification.requestPermission();
 }
 
 const alarm = document.getElementById("alarmSound");
+const alertBanner = document.getElementById("alertBanner");
+const riskBox = document.getElementById("riskBox");
 
 const ctx = document.getElementById('riskChart').getContext('2d');
 
@@ -133,15 +148,20 @@ document.getElementById("temp").innerText = c.temp
 document.getElementById("humidity").innerText = c.humidity
 document.getElementById("alcohol").innerText = c.alcohol
 
-document.getElementById("riskBox").innerText =
-c.status + " ("+c.risk+"%)"
+riskBox.innerText = c.status + " ("+c.risk+"%)"
 
 if(c.status==="Safe"){
 riskBox.style.background="green"
+alarm.pause()
+alarm.currentTime = 0
+alertBanner.style.display="none"
 }
 
 else if(c.status==="Moderate"){
 riskBox.style.background="orange"
+alarm.pause()
+alarm.currentTime = 0
+alertBanner.style.display="none"
 }
 
 else if(c.status==="High"){
@@ -164,6 +184,13 @@ new Notification(
 {body:"Critical indoor hazard detected!"}
 )
 
+}
+
+if(c.alert && c.alert !== ""){
+alertBanner.style.display="block"
+alertBanner.innerText = c.alert
+}else{
+alertBanner.style.display="none"
 }
 
 chart.data.labels = data.history.map(i=>i.time)
