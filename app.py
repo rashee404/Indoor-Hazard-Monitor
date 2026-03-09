@@ -55,11 +55,6 @@ def get_status(score):
         return "Critical"
 
 
-@app.route("/")
-def home():
-    return render_template("index.html")
-
-
 @app.route("/data")
 def data():
 
@@ -72,10 +67,6 @@ def data():
 
     risk = calculate_risk(lpg, temp, humidity, alcohol)
     status = get_status(risk)
-    alert_message = ""
-
-if status in ["High", "Critical"]:
-    alert_message = "⚠ Hazard Detected! Emergency Protocol Activated."
 
     explanation = f"LPG:{lpg}, Temp:{temp}, Humidity:{humidity}, Alcohol:{alcohol}"
 
@@ -86,6 +77,8 @@ if status in ["High", "Critical"]:
 
     if len(history) > 10:
         history.pop(0)
+
+    alert_message = ""
 
     if status != last_status and status in ["High", "Critical"]:
         send_pushbullet("⚠ Indoor Hazard Alert", f"{status} risk detected!")
@@ -98,6 +91,9 @@ if status in ["High", "Critical"]:
 
         if len(incident_log) > 10:
             incident_log.pop(0)
+
+    if status in ["High", "Critical"]:
+        alert_message = "⚠ Hazard Detected! Emergency Protocol Activated."
 
     last_status = status
 
@@ -116,10 +112,10 @@ if status in ["High", "Critical"]:
         "incident_log": incident_log
     })
 
-
 if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT",5000))
     app.run(host="0.0.0.0", port=port)
+
 
 
