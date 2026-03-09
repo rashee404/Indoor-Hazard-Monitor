@@ -72,6 +72,10 @@ def data():
 
     risk = calculate_risk(lpg, temp, humidity, alcohol)
     status = get_status(risk)
+    alert_message = ""
+
+if status in ["High", "Critical"]:
+    alert_message = "⚠ Hazard Detected! Emergency Protocol Activated."
 
     explanation = f"LPG:{lpg}, Temp:{temp}, Humidity:{humidity}, Alcohol:{alcohol}"
 
@@ -105,7 +109,8 @@ def data():
             "alcohol": alcohol,
             "risk": risk,
             "status": status,
-            "explanation": explanation
+            "explanation": explanation,
+            "alert": alert_message
         },
         "history": history,
         "incident_log": incident_log
@@ -116,4 +121,5 @@ if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT",5000))
     app.run(host="0.0.0.0", port=port)
+
 
