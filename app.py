@@ -55,9 +55,11 @@ def get_status(score):
         return "Critical"
 
 
+@app.route("/")
+def home():
+    return render_template("index.html")
 @app.route("/data")
 def data():
-
     global last_status
 
     lpg = random.randint(100, 600)
@@ -116,6 +118,7 @@ if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT",5000))
     app.run(host="0.0.0.0", port=port)
+
 
 
 
