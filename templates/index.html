@@ -1,126 +1,184 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>Indoor Air Hazard Monitor</title>
+
+<title>Indoor Air Risk Monitor</title>
+
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
+
 body{
-    font-family: Arial;
-    background: #0f172a;
-    color: white;
-    text-align: center;
+font-family:Arial;
+background:#0f172a;
+color:white;
+text-align:center;
 }
+
 .card-container{
-    display:flex;
-    justify-content:center;
-    flex-wrap:wrap;
-    margin-top:20px;
+display:flex;
+justify-content:center;
+flex-wrap:wrap;
+margin-top:20px;
 }
+
 .card{
-    background:#1e293b;
-    padding:20px;
-    margin:10px;
-    border-radius:10px;
-    width:150px;
+background:#1e293b;
+padding:20px;
+margin:10px;
+border-radius:10px;
+width:150px;
 }
+
 #riskBox{
-    margin:20px;
-    padding:20px;
-    border-radius:10px;
-    font-size:28px;
+margin:20px;
+padding:20px;
+border-radius:10px;
+font-size:28px;
 }
+
 button{
-    padding:12px 20px;
-    border:none;
-    border-radius:8px;
-    background:red;
-    color:white;
-    font-size:16px;
+padding:12px 20px;
+border:none;
+border-radius:8px;
+background:red;
+color:white;
+font-size:16px;
 }
+
 </style>
+
 </head>
+
 <body>
 
 <h1>Indoor Air Hazard Monitoring System</h1>
+
 <div id="riskBox">Loading...</div>
 
 <div class="card-container">
-    <div class="card">LPG<br><span id="lpg">--</span></div>
-    <div class="card">Temperature<br><span id="temp">--</span></div>
-    <div class="card">Humidity<br><span id="humidity">--</span></div>
-    <div class="card">Alcohol<br><span id="alcohol">--</span></div>
+
+<div class="card">
+LPG
+<br>
+<span id="lpg">--</span>
+</div>
+
+<div class="card">
+Temperature
+<br>
+<span id="temp">--</span>
+</div>
+
+<div class="card">
+Humidity
+<br>
+<span id="humidity">--</span>
+</div>
+
+<div class="card">
+Alcohol
+<br>
+<span id="alcohol">--</span>
+</div>
+
 </div>
 
 <h3>Risk Trend</h3>
+
 <canvas id="riskChart"></canvas>
+
 <br><br>
+
 <button onclick="callEmergency()">🚨 Emergency Call</button>
+
 <audio id="alarmSound" src="/static/alarm.mp3"></audio>
 
 <script>
+
 if(Notification.permission !== "granted"){
-    Notification.requestPermission();
+Notification.requestPermission();
 }
+
 const alarm = document.getElementById("alarmSound");
-let alarmPlaying = false;
 
 const ctx = document.getElementById('riskChart').getContext('2d');
+
 const chart = new Chart(ctx,{
-    type:'line',
-    data:{
-        labels:[],
-        datasets:[{
-            label:'Risk %',
-            data:[],
-            borderColor:'red'
-        }]
-    }
+type:'line',
+data:{
+labels:[],
+datasets:[{
+label:'Risk %',
+data:[],
+borderColor:'red'
+}]
+}
 });
 
 function callEmergency(){
-    window.location.href="tel:112";
+window.location.href="tel:112";
 }
 
 function updateData(){
-    fetch('https://indoor-hazard-monitor.onrender.com/data')  // <--- For Render, replace with full URL like 'https://YOURAPP.onrender.com/data'
-    .then(res=>res.json())
-    .then(data=>{
-        const c = data.current;
 
-        document.getElementById("lpg").innerText = c.lpg;
-        document.getElementById("temp").innerText = c.temp;
-        document.getElementById("humidity").innerText = c.humidity;
-        document.getElementById("alcohol").innerText = c.alcohol;
-        const riskBox = document.getElementById("riskBox");
-        riskBox.innerText = c.status + " ("+c.risk+"%)";
+fetch('/data')
+.then(res=>res.json())
+.then(data=>{
 
-        if(c.status==="Safe"){
-            riskBox.style.background="green";
-            if(alarmPlaying){ alarm.pause(); alarm.currentTime=0; alarmPlaying=false; }
-        }
-        else if(c.status==="Moderate"){
-            riskBox.style.background="orange";
-            if(alarmPlaying){ alarm.pause(); alarm.currentTime=0; alarmPlaying=false; }
-        }
-        else if(c.status==="High"){
-            riskBox.style.background="red";
-            if(!alarmPlaying){ alarm.play(); alarmPlaying=true; }
-            new Notification("Hazard Warning",{body:"High risk detected!"});
-        }
-        else{
-            riskBox.style.background="darkred";
-            if(!alarmPlaying){ alarm.play(); alarmPlaying=true; }
-            new Notification("CRITICAL ALERT",{body:"Critical indoor hazard detected!"});
-        }
+const c = data.current
 
-        chart.data.labels = data.history.map(i=>i.time);
-        chart.data.datasets[0].data = data.history.map(i=>i.risk);
-        chart.update();
-    })
+document.getElementById("lpg").innerText = c.lpg
+document.getElementById("temp").innerText = c.temp
+document.getElementById("humidity").innerText = c.humidity
+document.getElementById("alcohol").innerText = c.alcohol
+
+document.getElementById("riskBox").innerText =
+c.status + " ("+c.risk+"%)"
+
+if(c.status==="Safe"){
+riskBox.style.background="green"
 }
 
-setInterval(updateData,3000);
-updateData();
+else if(c.status==="Moderate"){
+riskBox.style.background="orange"
+}
+
+else if(c.status==="High"){
+riskBox.style.background="red"
+alarm.play()
+
+new Notification(
+"Hazard Warning",
+{body:"High risk detected!"}
+)
+}
+
+else{
+
+riskBox.style.background="darkred"
+alarm.play()
+
+new Notification(
+"CRITICAL ALERT",
+{body:"Critical indoor hazard detected!"}
+)
+
+}
+
+chart.data.labels = data.history.map(i=>i.time)
+chart.data.datasets[0].data = data.history.map(i=>i.risk)
+
+chart.update()
+
+})
+
+}
+
+setInterval(updateData,3000)
+
+updateData()
+
 </script>
 
 </body>
