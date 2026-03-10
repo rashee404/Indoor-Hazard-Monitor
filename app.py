@@ -18,6 +18,7 @@ def send_pushbullet(title, message):
             "https://api.pushbullet.com/v2/pushes",
             headers={"Access-Token": PUSHBULLET_TOKEN},
             json={"type": "note", "title": title, "body": message}
+            timeout=2
         )
     except:
         pass
@@ -105,3 +106,4 @@ if __name__ == "__main__":
     import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port)
+
