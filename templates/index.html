@@ -138,6 +138,8 @@ c.status + " ("+c.risk+"%)"
 
 if(c.status==="Safe"){
 riskBox.style.background="green"
+  alarm.pause()
+  alarm.currentTime = 0
 }
 
 else if(c.status==="Moderate"){
